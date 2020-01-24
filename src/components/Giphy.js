@@ -1,43 +1,61 @@
-import React, { useEffect, useState } from "react";
-import Button from "./Button";
-import Giphymaker from "./Giphymaker";
+import React, { useState } from "react";
+import GiphyMaker from "./Giphymaker";
+import SearchForm from "./SearchForm";
 
 export default function Friend() {
-  const [giphy, setGiphy] = useState({});
-  const [isLoading, setLoading] = useState(true);
-  const [hasError, setError] = useState(false);
+  const [giphy, setGiphy] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [searchText, setSearchText] = useState("");
 
-  const getGiphy = () => {
-    setLoading(true);
-    fetch(
-      "http://api.giphy.com/v1/gifs/search?api_key=I22qzaSdICzGEGyDP5nt3aQa5FmQiFjL&q=home"
-    )
-      .then(resp => resp.json())
-      .then(data => {
-        setGiphy(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setError(true);
-        setLoading(false);
-      });
+  //?api_key=&q=home
+  const getGiphy = async searchString => {
+    try {
+      setLoading(true);
+      const resp = await fetch(
+        `http://api.giphy.com/v1/gifs/search?api_key=${process.env.REACT_APP_GIPHY_KEY}&q=${searchString}`
+      );
+      const data = await resp.json();
+      setError(false);
+      setErrorMessage("");
+      setGiphy(data.data);
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+      setError(true);
+      setErrorMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(getGiphy, []);
+  function handleFormSubmit(event) {
+    event.preventDefault();
+    getGiphy(searchText);
+  }
 
-  if (isLoading) {
-    return <p>Loading...</p>;
+  function handleSearchInputChange(event) {
+    setSearchText(event.target.value);
   }
-  if (hasError) {
-    return <p>has error</p>;
-  }
-  if (giphy) {
-    return (
-      <div className='giphy'>
-        <Button onClick={getGiphy} />
-        <Giphymaker giphy={giphy} />
-      </div>
-    );
-  }
+
+  return (
+    <>
+      <SearchForm
+        onHandleFormSubmit={handleFormSubmit}
+        onHandleSearchInputChange={handleSearchInputChange}
+      />
+      {loading && (
+        <>
+          <p>Wait for it...</p>
+          <img
+            src='https://miro.medium.com/max/441/1*9EBHIOzhE1XfMYoKz1JcsQ.gif'
+            alt='loading'
+          />
+        </>
+      )}
+      {giphy.length > 0 && <GiphyMaker gifItems={giphy} />}
+      {error && <p>Error occurred: {errorMessage}</p>}
+    </>
+  );
 }
